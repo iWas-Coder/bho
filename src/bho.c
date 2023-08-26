@@ -59,11 +59,7 @@ int main(int argc, char **argv) {
     #ifdef DEBUG
     printf("DEBUG: Treating '%s' as file.\n", arg);
     #endif
-    if (sha256_file_compute(fd, hash) == 1) {
-      fclose(fd);
-      free(arg);
-      return 1;
-    }
+    sha256_file_compute(fd, hash);
     fclose(fd);
   }
   else {

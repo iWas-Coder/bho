@@ -41,6 +41,10 @@ ifdef DEBUG
 endif
 CFLAGS = -Wall -Wextra -Werror -pedantic -std=gnu2x -O3 -flto -fno-semantic-interposition
 LDFLAGS =
+ifdef PROF
+	CFLAGS += -pg
+	LDFLAGS += -pg
+endif
 
 
 .PHONY: all clean mrproper help
