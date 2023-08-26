@@ -8,33 +8,6 @@
 #define ARG_STDIN_BUF_SIZE 64
 
 
-unsigned char *file_to_hex(unsigned char *filename) {
-  FILE *fd = fopen((char *) filename, "rb");
-  if (!fd) return NULL;
-
-  fseek(fd, 0, SEEK_END);
-  size_t len = ftell(fd);
-  fseek(fd, 0, SEEK_SET);
-
-  unsigned char *file_contents = malloc((len * 2) + 1);
-  if (!file_contents) {
-    fclose(fd);
-    return NULL;
-  }
-
-  unsigned char buf;
-  size_t i = 0;
-  while (fread(&buf, sizeof(buf), 1, fd) == 1) {
-    sprintf((char *) &file_contents[i], "%02x", buf);
-    i += 2;
-  }
-  file_contents[i] = '\0';
-  
-  fclose(fd);
-  return file_contents;
-}
-
-
 int main(int argc, char **argv) {
   unsigned char *arg = NULL;
   unsigned char hash[SHA256_BLOCK_SIZE];
@@ -77,16 +50,21 @@ int main(int argc, char **argv) {
   // Compute hash
   if (access((char *) arg, R_OK) == 0) {
     // 'arg' is file
-    unsigned char *file_contents = file_to_hex(arg);
-    if (!file_contents) {
+    FILE *fd = fopen((char *) arg, "rb");
+    if (!fd) {
       fprintf(stderr, "ERROR: File '%s' could not be read.\n", arg);
+      free(arg);
       return 1;
     }
     #ifdef DEBUG
     printf("DEBUG: Treating '%s' as file.\n", arg);
     #endif
-    sha256_compute(file_contents, hash);
-    free(file_contents);
+    if (sha256_file_compute(fd, hash) == 1) {
+      fclose(fd);
+      free(arg);
+      return 1;
+    }
+    fclose(fd);
   }
   else {
     // 'arg' is text
@@ -96,11 +74,8 @@ int main(int argc, char **argv) {
     sha256_compute(arg, hash);
   }
 
-  // Output hash
-  for (int i = 0; i < SHA256_BLOCK_SIZE; ++i) {
-    printf("%02x", hash[i]);
-  }
-  printf("\n");
+  // Print hash to stdout
+  sha256_print(hash);
 
   free(arg);
   return 0;

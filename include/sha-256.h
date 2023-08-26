@@ -3,6 +3,7 @@
 
 
 #include <stddef.h>
+#include <stdio.h>
 
 
 #define SHA256_BLOCK_SIZE 32
@@ -21,6 +22,8 @@ void sha256_transform(sha256_ctx *ctx, const unsigned char *data);
 void sha256_update(sha256_ctx *ctx, const unsigned char *data, size_t len);
 void sha256_out(sha256_ctx *ctx, unsigned char *hash);
 void sha256_compute(unsigned char *string, unsigned char *hash);
+void sha256_file_compute(FILE *fd, unsigned char *hash);
+void sha256_print(unsigned char *hash);
 
 
 #endif  // SHA256_H_

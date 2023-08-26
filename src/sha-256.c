@@ -1,6 +1,9 @@
+#include <stdlib.h>
 #include <string.h>
 #include <sha-256.h>
 
+
+#define FILE_COMPUTE_BUF_SIZE 64
 
 #define ROTATE_LEFT(a, b) ((a << b) | (a >> (32 - b)))
 #define ROTATE_RIGHT(a, b) ((a >> b) | (a << (32 - b)))
@@ -148,4 +151,25 @@ void sha256_compute(unsigned char *string, unsigned char *hash) {
   sha256_init(&ctx);
   sha256_update(&ctx, string, strlen((char*) string));
   sha256_out(&ctx, hash);
+}
+
+
+void sha256_file_compute(FILE *fd, unsigned char *hash) {
+  sha256_ctx ctx;
+  size_t bytes_read;
+  unsigned char buf[FILE_COMPUTE_BUF_SIZE];
+
+  sha256_init(&ctx);
+  while ((bytes_read = fread(buf, 1, sizeof(buf), fd)) > 0) {
+    sha256_update(&ctx, buf, bytes_read);
+  }
+  sha256_out(&ctx, hash);
+}
+
+
+void sha256_print(unsigned char *hash) {
+  for (int i = 0; i < SHA256_BLOCK_SIZE; ++i) {
+    printf("%02x", hash[i]);
+  }
+  printf("\n");
 }
