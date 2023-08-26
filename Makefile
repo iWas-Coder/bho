@@ -28,39 +28,37 @@ PPO_LD = LD
 SRC_DIR = src
 HDR_DIR = include
 BUILD_DIR = build
-OBJ_DIR = $(BUILD_DIR)/obj
 
 # Files
 SRCS := $(wildcard $(SRC_DIR)/*.c)
-OBJS := $(patsubst $(SRC_DIR)/%.c, $(OBJ_DIR)/%.o, $(SRCS))
-OUT = $(APP)_v$(FULL_VERSION)
+OBJS := $(patsubst $(SRC_DIR)/%.c, $(BUILD_DIR)/%.o, $(SRCS))
 
 # Compilation flags
 CC = gcc
 CPPFLAGS = -I $(HDR_DIR)
-CFLAGS = -Wall -Wextra -Werror -pedantic -std=gnu2x -O2
+ifdef DEBUG
+	CPPFLAGS += -DDEBUG
+endif
+CFLAGS = -Wall -Wextra -Werror -pedantic -std=gnu2x -O3 -flto -fno-semantic-interposition
 LDFLAGS =
 
 
-.PHONY: all $(APP) clean mrproper help
+.PHONY: all clean mrproper help
 
 
 # Root target
 all: $(APP)
 
-# App binary
-$(APP): $(OUT)
-
 # Linking stage
-$(OUT): $(OBJS)
+$(APP): $(OBJS)
 	@printf "  $(PPO_LD)\t$@\n"
 	@$(CC) $^ $(LDFLAGS) -o $@
 
 # Compilation stage
-$(OBJ_DIR)/%.o: $(SRC_DIR)/%.c
-	@if [ ! -d $(OBJ_DIR) ]; then                  \
-		printf "  $(PPO_MKDIR)\t$(OBJ_DIR)\n"; \
-		mkdir -p $(OBJ_DIR);                   \
+$(BUILD_DIR)/%.o: $(SRC_DIR)/%.c
+	@if [ ! -d $(BUILD_DIR) ]; then                  \
+		printf "  $(PPO_MKDIR)\t$(BUILD_DIR)\n"; \
+		mkdir $(BUILD_DIR);                      \
 	fi
 	@printf "  $(PPO_CC)\t$@\n"
 	@$(CC) $(CPPFLAGS) $(CFLAGS) -c $< -o $@
@@ -75,9 +73,9 @@ clean:
 
 # Clean final products (depends on 'build')
 mrproper: clean
-	@if [ -e $(OUT) ]; then                    \
-		printf "  $(PPO_CLEAN)\t$(OUT)\n"; \
-		rm $(OUT);                         \
+	@if [ -e $(APP) ]; then                    \
+		printf "  $(PPO_CLEAN)\t$(APP)\n"; \
+		rm $(APP);                         \
 	fi
 
 # Help
