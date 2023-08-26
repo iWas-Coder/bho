@@ -10,7 +10,7 @@
 
 int main(int argc, char **argv) {
   unsigned char *arg = NULL;
-  unsigned char hash[SHA256_BLOCK_SIZE];
+  unsigned char hash[SHA256_DIGEST_SIZE];
   
   // Argument handling
   if (argc == 2) {

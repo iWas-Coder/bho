@@ -6,7 +6,10 @@
 #include <stdio.h>
 
 
-#define SHA256_BLOCK_SIZE 32
+#define SHA256_CHUNK_SIZE 64
+#define SHA256_DIGEST_SIZE 32
+#define SHA256_DIGEST_ALIGN 4
+#define FILE_COMPUTE_BUF_SIZE 1024
 
 
 typedef struct {

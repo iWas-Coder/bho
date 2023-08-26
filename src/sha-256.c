@@ -1,9 +1,8 @@
+#include <math.h>
 #include <stdlib.h>
 #include <string.h>
 #include <sha-256.h>
 
-
-#define FILE_COMPUTE_BUF_SIZE 64
 
 #define ROTATE_LEFT(a, b) ((a << b) | (a >> (32 - b)))
 #define ROTATE_RIGHT(a, b) ((a >> b) | (a << (32 - b)))
@@ -15,7 +14,7 @@
 #define SIG1(x) (ROTATE_RIGHT(x, 17) ^ ROTATE_RIGHT(x, 19) ^ (x >> 10))
 
 
-static const unsigned int k[64] = {
+static const unsigned int k[SHA256_CHUNK_SIZE] = {
   0x428a2f98,0x71374491,0xb5c0fbcf,0xe9b5dba5,0x3956c25b,0x59f111f1,0x923f82a4,0xab1c5ed5,
   0xd807aa98,0x12835b01,0x243185be,0x550c7dc3,0x72be5d74,0x80deb1fe,0x9bdc06a7,0xc19bf174,
   0xe49b69c1,0xefbe4786,0x0fc19dc6,0x240ca1cc,0x2de92c6f,0x4a7484aa,0x5cb0a9dc,0x76f988da,
@@ -42,18 +41,21 @@ void sha256_init(sha256_ctx* ctx) {
 
 
 void sha256_transform(sha256_ctx *ctx, const unsigned char *data) {
-  unsigned int a, b, c, d, e, f, g, h, i, j, t1, t2, m[64];
+  unsigned int a, b, c, d, e, f, g, h, i, j, t1, t2, m[SHA256_CHUNK_SIZE];
 
-  for (i = 0, j = 0; i < 16; ++i, j += 4) {
+  // Data blocks preparation
+  for (i = 0, j = 0; i < pow(SHA256_DIGEST_ALIGN, 2); ++i, j += SHA256_DIGEST_ALIGN) {
     m[i] = (data[j] << 24)     |
            (data[j + 1] << 16) |
            (data[j + 2] << 8)  |
            (data[j + 3]);
   }
-  for (; i < 64; ++i) {
+  for (; i < SHA256_CHUNK_SIZE; ++i) {
+    // PROF: 20% of time spends here
     m[i] = SIG1(m[i - 2]) + m[i - 7] + SIG0(m[i - 15]) + m[i - 16];
   }
 
+  // Saving context's state to local variables
   a = ctx->state[0];
   b = ctx->state[1];
   c = ctx->state[2];
@@ -63,9 +65,13 @@ void sha256_transform(sha256_ctx *ctx, const unsigned char *data) {
   g = ctx->state[6];
   h = ctx->state[7];
 
-  for (i = 0; i < 64; ++i) {
+  // Main transformation
+  for (i = 0; i < SHA256_CHUNK_SIZE; ++i) {
+    // Intermediate computations
+    // PROF: 15% of time spends here
     t1 = h + EP1(e) + CH(e, f, g) + k[i] + m[i];
     t2 = EP0(a) + MAJ(a, b, c);
+    // Update local variables
     h = g;
     g = f;
     f = e;
@@ -76,6 +82,7 @@ void sha256_transform(sha256_ctx *ctx, const unsigned char *data) {
     a = t1 + t2;
   }
 
+  // Update context's state with computed values in local variables
   ctx->state[0] += a;
   ctx->state[1] += b;
   ctx->state[2] += c;
@@ -93,7 +100,7 @@ void sha256_update(sha256_ctx *ctx, const unsigned char *data, size_t len) {
   for (i = 0; i < len; ++i) {
     ctx->data[ctx->data_len] = data[i];
     ++(ctx->data_len);
-    if (ctx->data_len == 64) {
+    if (ctx->data_len == SHA256_CHUNK_SIZE) {
       sha256_transform(ctx, ctx->data);
       ctx->bit_len += 512;
       ctx->data_len = 0;
@@ -114,7 +121,7 @@ void sha256_out(sha256_ctx *ctx, unsigned char *hash) {
   }
   else {
     ctx->data[i++] = 0x80;
-    while (i < 64) {
+    while (i < SHA256_CHUNK_SIZE) {
       ctx->data[i++] = 0x00;
     }
     sha256_transform(ctx, ctx->data);
@@ -132,7 +139,7 @@ void sha256_out(sha256_ctx *ctx, unsigned char *hash) {
   ctx->data[56] = ctx->bit_len >> 56;
   sha256_transform(ctx, ctx->data);
 
-  for (i = 0; i < 4; ++i) {
+  for (i = 0; i < SHA256_DIGEST_ALIGN; ++i) {
     hash[i]      = (ctx->state[0] >> (24 - i * 8)) & 0x000000ff;
     hash[i + 4]  = (ctx->state[1] >> (24 - i * 8)) & 0x000000ff;
     hash[i + 8]  = (ctx->state[2] >> (24 - i * 8)) & 0x000000ff;
@@ -168,7 +175,7 @@ void sha256_file_compute(FILE *fd, unsigned char *hash) {
 
 
 void sha256_print(unsigned char *hash) {
-  for (int i = 0; i < SHA256_BLOCK_SIZE; ++i) {
+  for (int i = 0; i < SHA256_DIGEST_SIZE; ++i) {
     printf("%02x", hash[i]);
   }
   printf("\n");
